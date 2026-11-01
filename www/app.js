@@ -265,130 +265,86 @@ function vLock() {
   }
   
   const A = lsGet(KA);
+  const hasData = localStorage.getItem(OLD) || lsGet(KD);
+  const hasEncryptedData = lsGet(KD);
   const setup = !(A && A.ver);
   
-  let h = '<div style="max-width:360px;margin:10vh auto 0"><h1>SmartGest</h1>';
-  h += '<p class="sub">' + (setup ? 
-    'Créez un code à 6 chiffres. Il chiffre vos données sur cet appareil et ne peut pas être récupéré : notez-le en lieu sûr.' :
-    'Entrez votre code pour ouvrir l’application.') + '</p>';
-  h += '<label>Code à 6 chiffres</label><input id="p1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="6">';
-  
+  // Si pas de code PIN défini
   if (setup) {
-    h += '<label>Confirmer le code</label><input id="p2" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="6">';
+    // Si des données chiffrées existent sans code, c'est un problème
+    if (hasEncryptedData) {
+      let h = '<div style="max-width:360px;margin:10vh auto 0">';
+      h += '<h1>SmartGest</h1>';
+      h += '<div class="panel bad">⚠️ Des données chiffrées existent mais aucun code PIN n’est configuré.<br>Vous devez restaurer une sauvegarde ou réinitialiser l’application.</div>';
+      h += '<div class="row" style="gap:10px; margin-top:15px">';
+      h += '<button onclick="go('sec')" style="flex:1">Restaurer une sauvegarde</button>';
+      h += '<button onclick="confirmResetApp()" style="flex:1" class="bad">Réinitialiser (tout effacer)</button>';
+      h += '</div></div>';
+      return h;
+    }
+    
+    let h = '<div style="max-width:360px;margin:10vh auto 0">';
+    h += '<h1>SmartGest</h1>';
+    
+    if (hasData) {
+      h += '<p class="sub">Bienvenue ! Vous pouvez accéder à vos données sans code PIN ou en créer un code pour plus de sécurité.</p>';
+    } else {
+      h += '<p class="sub">Commencez à utiliser SmartGest. Vous pouvez créer un code PIN pour protéger vos données.</p>';
+    }
+    
+    h += '<div class="row" style="gap:10px">';
+    h += '<button id="lbtn" style="flex:1" onclick="skipPinSetup()">' + (hasData ? 'Accéder sans code' : 'Commencer sans code') + '</button>';
+    h += '<button id="lbtn" style="flex:1" onclick="showPinSetup()">Créer un code PIN</button>';
+    h += '</div></div>';
+    return h;
   }
   
+  // Si code PIN existe, demander de le saisir
+  let h = '<div style="max-width:360px;margin:10vh auto 0">';
+  h += '<h1>SmartGest</h1>';
+  h += '<p class="sub">Entrez votre code pour ouvrir l’application.</p>';
+  h += '<label>Code à 6 chiffres</label><input id="p1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="6">';
   h += '<div id="lerr" class="bad" style="min-height:22px;margin:10px 0"></div>';
-  h += '<button id="lbtn" style="width:100%" onclick="' + (setup ? 'doSetup()' : 'doUnlock()') + '">' + (setup ? 'Créer le code' : 'Déverrouiller') + '</button></div>';
+  h += '<button id="lbtn" style="width:100%" onclick="doUnlock()">Déverrouiller</button></div>';
   
   return h;
 }
 
-async function doSetup() {
-  const a = $('p1').value;
-  const b = $('p2').value;
-  const err = $('lerr');
-  
-  if (!/^\d{6}$/.test(a)) {
-    err.textContent = 'Le code doit contenir exactement 6 chiffres.';
-    return;
+// ========== RESET APP ==========
+function confirmResetApp() {
+  if (confirm('⚠️ ATTENTION : Cela supprimera TOUTES vos données (produits, ventes, etc.) et réinitialisera l’application. \n\nCette action est IRRÉVERSIBLE. Voulez-vous vraiment continuer ?')) {
+    localStorage.clear();
+    location.reload();
   }
-  if (a !== b) {
-    err.textContent = 'Les deux codes ne correspondent pas.';
-    return;
-  }
-  if (weak(a)) {
-    err.textContent = 'Code trop simple. Évitez 111111, 123456, etc.';
-    return;
-  }
-  
-  busy(true);
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const d = await derive(a, salt);
+}
+
+// ========== PIN SETUP OPTION ==========
+function showPinSetup() {
+  let h = '<div style="max-width:360px;margin:10vh auto 0">';
+  h += '<h1>SmartGest</h1>';
+  h += '<p class="sub">Créez un code à 6 chiffres. Il chiffre vos données sur cet appareil et ne peut pas être récupéré : notez-le en lieu sûr.</p>';
+  h += '<label>Code à 6 chiffres</label><input id="p1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="6">';
+  h += '<label>Confirmer le code</label><input id="p2" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="6">';
+  h += '<div id="lerr" class="bad" style="min-height:22px;margin:10px 0"></div>';
+  h += '<button id="lbtn" style="width:100%" onclick="doSetup()">Créer le code</button></div>';
+  $("app").innerHTML = h;
+}
+
+function skipPinSetup() {
+  // Créer un état sans code PIN
   const old = lsGet(OLD);
-  
   if (!old || !Array.isArray(old.products) || !Array.isArray(old.sales)) {
-    old = { products: [], sales: [] };
+    S = { products: [], sales: [] };
+  } else {
+    S = old;
   }
-  
-  K = d.key;
-  S = old;
-  lsSet(KA, { salt: b64(salt), ver: d.ver, fails: 0, until: 0 });
-  save();
-  await q;
-  
-  try { localStorage.removeItem(OLD); } catch (e) {}
-  
+  K = null; // Pas de clé de chiffrement
+  tab = 'home';
   startIdle();
   render();
 }
 
-async function doUnlock() {
-  const A = lsGet(KA);
-  const pin = $('p1').value;
-  const now = Date.now();
-  const err = $('lerr');
-  
-  if (A.until > now) {
-    err.textContent = 'Trop d’essais. Réessayez dans ' + Math.ceil((A.until - now) / 1000) + ' s.';
-    return;
-  }
-  
-  if (!/^\d{6}$/.test(pin)) {
-    err.textContent = 'Le code contient 6 chiffres.';
-    return;
-  }
-  
-  busy(true);
-  const d = await derive(pin, ub(A.salt));
-  
-  if (d.ver !== A.ver) {
-    A.fails = (A.fails || 0) + 1;
-    if (A.fails >= 5) {
-      A.until = now + 30000 * Math.pow(2, Math.min(A.fails - 5, 8));
-    }
-    lsSet(KA, A);
-    busy(false);
-    err.textContent = A.until > now ? 
-      'Code incorrect. Application bloquée ' + Math.round((A.until - now) / 1000) + ' s.' :
-      'Code incorrect (' + A.fails + ' échec(s)).';
-    return;
-  }
-  
-  let raw = lsGet(KD);
-  let data = null;
-  let note = '';
-  
-  if (!raw) {
-    data = { products: [], sales: [] };
-  } else {
-    try {
-      data = await unseal(d.key, raw);
-    } catch (e) {
-      try {
-        data = await unseal(d.key, lsGet(KD + '.prev'));
-        note = 'Données altérées : dernière copie saine restaurée.';
-      } catch (e2) {
-        lsSet(KD + '.corrupt', raw);
-        data = { products: [], sales: [] };
-        note = 'Données illisibles ou altérées. Restaurez une sauvegarde dans Sécurité.';
-      }
-    }
-  }
-  
-  if (!data || !Array.isArray(data.products) || !Array.isArray(data.sales)) {
-    data = { products: [], sales: [] };
-  }
-  
-  A.fails = 0;
-  A.until = 0;
-  lsSet(KA, A);
-  K = d.key;
-  S = data;
-  tab = 'home';
-  startIdle();
-  render();
-  if (note) msg(note);
-}
+
 
 function vHome() {
   const ts = S.sales.filter(function(s) { return ymd(new Date(s.t)) === today(); });
@@ -723,6 +679,8 @@ function vSec() {
   
   h += '<div class="panel row"><div><b>Code d’accès</b><div class="mute">Changer le code à 6 chiffres</div></div><button class="ghost" onclick="pinDlg()">Modifier</button></div>';
   
+  h += '<div class="panel row"><div><b>Supprimer le code PIN</b><div class="mute">Accès sans code (dangereux)</div></div><button class="ghost bad" onclick="confirmRemovePin()">Supprimer</button></div>';
+  
   return h;
 }
 
@@ -877,6 +835,98 @@ async function doPin() {
   
   $('dlg').close();
   msg('Code modifié. Les anciennes sauvegardes gardent l’ancien code.');
+}
+
+
+// ========== REMOVE PIN ==========
+function confirmRemovePin() {
+  if (confirm('ATTENTION : Cela supprimera le code PIN et vos données seront accessibles SANS protection. \n\nVoulez-vous vraiment continuer ?')) {
+    removePinDlg();
+  }
+}
+
+function removePinDlg() {
+  $('dlg').innerHTML = '<h2 style="margin-top:0">Supprimer le code PIN</h2>' +
+    '<p class="bad" style="margin-bottom:15px">⚠️ Cette action supprimera la protection par code PIN. Vos données seront accessibles sans restriction.</p>' +
+    '<label>Code PIN actuel (pour confirmation)</label>' +
+    '<input id="rpin" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6">' +
+    '<div id="rperr" class="bad" style="min-height:22px;margin:8px 0"></div>' +
+    '<div class="row">' +
+    '<button class="ghost" onclick="$('dlg').close()">Annuler</button>' +
+    '<button class="bad" onclick="doRemovePin()">Supprimer le code</button>' +
+    '</div>';
+  $('dlg').showModal();
+}
+
+async function doRemovePin() {
+  const pin = $('rpin').value;
+  const err = $('rperr');
+  const A = lsGet(KA);
+  
+  if (!/^\d{6}$/.test(pin)) {
+    err.textContent = 'Le code doit contenir 6 chiffres.';
+    return;
+  }
+  
+  busy(true);
+  try {
+    const d = await derive(pin, ub(A.salt));
+    if (d.ver !== A.ver) {
+      err.textContent = 'Code PIN incorrect.';
+      busy(false);
+      return;
+    }
+    
+    // Déchiffrer les données et les sauvegarder en clair
+    const raw = lsGet(KD);
+    let data = null;
+    
+    if (raw) {
+      try {
+        data = await unseal(d.key, raw);
+      } catch (e) {
+        try {
+          data = await unseal(d.key, lsGet(KD + '.prev'));
+        } catch (e2) {
+          err.textContent = 'Impossible de déchiffrer les données.';
+          busy(false);
+          return;
+        }
+      }
+    }
+    
+    if (!data || !Array.isArray(data.products) || !Array.isArray(data.sales)) {
+      data = { products: [], sales: [] };
+    }
+    
+    // Sauvegarder les données en clair dans OLD
+    try {
+      localStorage.setItem(OLD, JSON.stringify(data));
+    } catch (e) {
+      err.textContent = 'Erreur lors de la sauvegarde des données.';
+      busy(false);
+      return;
+    }
+    
+    // Supprimer les données chiffrées et l'authentification
+    localStorage.removeItem(KD);
+    localStorage.removeItem(KD + '.prev');
+    localStorage.removeItem(KA);
+    localStorage.removeItem(KD + '.corrupt');
+    
+    // Réinitialiser l'état
+    K = null;
+    S = data;
+    
+    $('dlg').close();
+    busy(false);
+    startIdle();
+    render();
+    msg('Code PIN supprimé. Vos données sont maintenant accessibles sans protection.');
+  } catch (e) {
+    err.textContent = 'Erreur : ' + e.message;
+    busy(false);
+  }
 }
 
 // ========== REPORT ==========

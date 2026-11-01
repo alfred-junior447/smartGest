@@ -1,0 +1,9 @@
+{
+  "appId": "com.alfred.smartgest",
+  "appName": "SmartGest",
+  "webDir": "www",
+  "android": {
+    "webContentsDebuggingEnabled": false,
+    "allowMixedContent": false
+  }
+}

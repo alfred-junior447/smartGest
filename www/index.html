@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3B5BFF">
+<title>SmartGest</title>
+<style>
+:root{--bg:#F4F6FB;--card:#fff;--ink:#12182B;--mute:#6B7391;--line:#E3E7F2;--acc:#3B5BFF;--acc-ink:#fff;--ok:#0E8F4A;--warn:#B7791F;--bad:#D92D4A;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0E1220;--card:#171D31;--ink:#EDF0FA;--mute:#98A1C2;--line:#262E48;--acc:#7C93FF;--acc-ink:#0E1220;--ok:#4CD38A;--warn:#F0B84A;--bad:#FF6B86}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0E1220;--card:#171D31;--ink:#EDF0FA;--mute:#98A1C2;--line:#262E48;--acc:#7C93FF;--acc-ink:#0E1220;--ok:#4CD38A;--warn:#F0B84A;--bad:#FF6B86}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.45 "Plus Jakarta Sans",system-ui,sans-serif;padding-bottom:84px}
+main{max-width:560px;margin:0 auto;padding:18px 16px}
+h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:0 0 4px}
+h2{font-size:15px;font-weight:600;margin:22px 0 8px}
+.sub{color:var(--mute);margin:0 0 16px}
+.big{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mute{color:var(--mute);font-size:13px}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:11px 16px;font-weight:600;background:var(--acc);color:var(--acc-ink)}
+button.ghost{background:transparent;color:var(--acc);border:1px solid var(--line)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+input{font:inherit;width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+.qty{display:flex;align-items:center;gap:8px}
+.qty button{padding:6px 12px;border-radius:8px}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;background:none;color:var(--mute);border-radius:0;padding:14px 2px;font-size:12px}
+input[type=password]{letter-spacing:.35em;font-size:20px;text-align:center}
+nav button[aria-current="true"]{color:var(--acc);box-shadow:inset 0 2px 0 var(--acc)}
+.bar{position:fixed;left:12px;right:12px;bottom:calc(64px + env(safe-area-inset-bottom,0px));max-width:536px;margin:0 auto}
+.bar button{width:100%;padding:15px;font-size:16px;box-shadow:0 6px 20px rgba(59,91,255,.35)}
+dialog{border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);width:min(92vw,420px);padding:18px}
+dialog::backdrop{background:rgba(10,14,28,.55)}
+.empty{text-align:center;color:var(--mute);padding:28px 8px}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(76px + env(safe-area-inset-bottom,0px));max-width:420px;margin:0 auto;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:12px;text-align:center;display:none;z-index:20}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<nav id="nav"></nav>
+<dialog id="dlg"></dialog>
+<div id="toast" role="status"></div>
+<script>
+var OLD='smartgest.v1',KD='smartgest.v2.data',KA='smartgest.v2.auth',S=null,tab='home',cart={},K=null,idle,hiddenAt=0,q=Promise.resolve();
+var enc=new TextEncoder(),dec=new TextDecoder();
+function b64(u){u=new Uint8Array(u);var s='';for(var i=0;i<u.length;i++)s+=String.fromCharCode(u[i]);return btoa(s)}
+function ub(s){var r=atob(s),u=new Uint8Array(r.length);for(var i=0;i<r.length;i++)u[i]=r.charCodeAt(i);return u}
+function lsGet(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+async function derive(pin,salt){
+  var m=await crypto.subtle.importKey('raw',enc.encode(pin),'PBKDF2',false,['deriveBits']);
+  var all=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:salt,iterations:310000,hash:'SHA-256'},m,512));
+  var key=await crypto.subtle.importKey('raw',all.slice(0,32),'AES-GCM',false,['encrypt','decrypt']);
+  return {key:key,ver:b64(all.slice(32))};
+}
+async function seal(key,obj){var iv=crypto.getRandomValues(new Uint8Array(12));var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,enc.encode(JSON.stringify(obj)));return {iv:b64(iv),ct:b64(ct)}}
+async function unseal(key,b){return JSON.parse(dec.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:ub(b.iv)},key,ub(b.ct))))}
+function save(){
+  if(!K||!S)return;var key=K,snap=JSON.parse(JSON.stringify(S));
+  q=q.then(async function(){var b=await seal(key,snap);try{var o=localStorage.getItem(KD);if(o)localStorage.setItem(KD+'.prev',o)}catch(e){}if(!lsSet(KD,b))msg('Stockage plein : données non enregistrées.')}).catch(function(){});
+}
+function $(i){return document.getElementById(i)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function f(n){return Math.round(n).toLocaleString("fr-FR")+" FCFA"}
+function today(){return new Date().toDateString()}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+var TABS=[["home","Tableau"],["stock","Stock"],["sell","Vendre"],["history","Historique"],["sec","Sécurité"]];
+function go(t){tab=t;render()}
+function render(){
+  if(!S){$("nav").innerHTML="";$("app").innerHTML=vLock();return}
+  $("nav").innerHTML=TABS.map(function(t){return '<button onclick="go(\''+t[0]+'\')" aria-current="'+(tab===t[0])+'">'+t[1]+'</button>'}).join("");
+  $("app").innerHTML=({home:vHome,stock:vStock,sell:vSell,history:vHistory,sec:vSec})[tab]();
+}
+function vHome(){
+  var ts=S.sales.filter(function(s){return new Date(s.t).toDateString()===today()});
+  var rev=0,gain=0;ts.forEach(function(s){rev+=s.total;s.items.forEach(function(i){gain+=(i.p-i.b)*i.q})});
+  var val=0;S.products.forEach(function(p){val+=p.buy*p.qty});
+  var low=S.products.filter(function(p){return p.qty<=p.min});
+  var h='<h1>Aujourd’hui</h1><p class="sub">'+new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})+'</p>';
+  h+='<div class="panel"><div class="mute">Ventes du jour</div><div class="big">'+f(rev)+'</div><div class="mute">'+ts.length+' vente(s) · bénéfice <span class="ok">'+f(gain)+'</span></div></div>';
+  h+='<div class="grid"><div class="panel"><div class="mute">Valeur du stock</div><b>'+f(val)+'</b></div><div class="panel"><div class="mute">Produits</div><b>'+S.products.length+'</b></div></div>';
+  h+='<div class="panel row"><div><b>Rapport du jour</b><div class="mute">Fichier CSV, ouvrable dans Excel</div></div><button onclick="dl(ymd(new Date()))">Télécharger</button></div>';
+  h+='<h2>À réapprovisionner</h2>';
+  if(!S.products.length)h+='<div class="empty">Ajoutez votre premier produit pour démarrer.<br><br><button onclick="go(\'stock\')">Ajouter un produit</button></div>';
+  else if(!low.length)h+='<div class="panel ok">Aucun produit en rupture proche.</div>';
+  else h+=low.map(function(p){return '<div class="panel row"><span>'+esc(p.name)+'</span><b class="'+(p.qty===0?'bad':'warn')+'">'+(p.qty===0?'Rupture':p.qty+' restant(s)')+'</b></div>'}).join("");
+  return h;
+}
+function vStock(){
+  var h='<div class="row"><h1>Stock</h1><button onclick="editP()">Ajouter</button></div><p class="sub">Touchez un produit pour le modifier.</p>';
+  if(!S.products.length)return h+'<div class="empty">Aucun produit. Ajoutez le premier avec son prix d’achat, son prix de vente et sa quantité.</div>';
+  return h+S.products.map(function(p){return '<div class="panel row" onclick="editP(\''+p.id+'\')"><div><b>'+esc(p.name)+'</b><div class="mute">Vente '+f(p.sell)+' · achat '+f(p.buy)+'</div></div><b class="'+(p.qty<=p.min?(p.qty===0?'bad':'warn'):'')+'">'+p.qty+'</b></div>'}).join("");
+}
+function editP(id){
+  var p=S.products.find(function(x){return x.id===id})||{name:"",buy:"",sell:"",qty:"",min:3};
+  $("dlg").innerHTML='<h2 style="margin-top:0">'+(id?"Modifier le produit":"Nouveau produit")+'</h2>'+
+  '<label>Nom</label><input id="n" value="'+esc(p.name)+'">'+
+  '<div class="grid"><div><label>Prix d’achat</label><input id="b" type="number" inputmode="numeric" value="'+p.buy+'"></div><div><label>Prix de vente</label><input id="s" type="number" inputmode="numeric" value="'+p.sell+'"></div>'+
+  '<div><label>Quantité</label><input id="q" type="number" inputmode="numeric" value="'+p.qty+'"></div><div><label>Alerte à partir de</label><input id="m" type="number" inputmode="numeric" value="'+p.min+'"></div></div>'+
+  '<div class="row" style="margin-top:16px">'+(id?'<button class="ghost bad" onclick="delP(\''+id+'\')">Supprimer</button>':'<span></span>')+'<span><button class="ghost" onclick="$(\'dlg\').close()">Annuler</button> <button onclick="saveP(\''+(id||"")+'\')">Enregistrer</button></span></div>';
+  $("dlg").showModal();
+}
+function saveP(id){
+  var name=$("n").value.trim();if(!name){$("n").focus();return}
+  var o={name:name,buy:+$("b").value||0,sell:+$("s").value||0,qty:Math.max(0,+$("q").value||0),min:+$("m").value||0};
+  if(id){Object.assign(S.products.find(function(x){return x.id===id}),o)}else{o.id=uid();S.products.push(o)}
+  save();$("dlg").close();render();
+}
+function delP(id){S.products=S.products.filter(function(x){return x.id!==id});save();$("dlg").close();render()}
+function vSell(){
+  var h='<h1>Vendre</h1><p class="sub">Touchez + pour ajouter au panier.</p>',tot=0,n=0;
+  if(!S.products.length)return h+'<div class="empty">Ajoutez des produits dans l’onglet Stock avant de vendre.</div>';
+  h+=S.products.map(function(p){var q=cart[p.id]||0;tot+=q*p.sell;n+=q;
+    return '<div class="panel row"><div><b>'+esc(p.name)+'</b><div class="mute">'+f(p.sell)+' · '+p.qty+' en stock</div></div><div class="qty"><button class="ghost" onclick="adj(\''+p.id+'\',-1)">−</button><b>'+q+'</b><button onclick="adj(\''+p.id+'\',1)">+</button></div></div>'}).join("");
+  if(n)h+='<div class="bar"><button onclick="sell()">Valider la vente · '+f(tot)+'</button></div>';
+  return h;
+}
+function adj(id,d){
+  var p=S.products.find(function(x){return x.id===id}),q=(cart[id]||0)+d;
+  if(q<0)q=0;if(q>p.qty){q=p.qty}
+  if(q)cart[id]=q;else delete cart[id];
+  render();
+}
+function sell(){
+  var items=[],tot=0;
+  S.products.forEach(function(p){var q=cart[p.id];if(q){items.push({id:p.id,name:p.name,q:q,p:p.sell,b:p.buy});p.qty-=q;tot+=q*p.sell}});
+  S.sales.unshift({id:uid(),t:Date.now(),items:items,total:tot});
+  cart={};save();go("home");
+}
+function vHistory(){
+  var h='<h1>Historique</h1><p class="sub">Les ventes les plus récentes d’abord.</p>';
+  h+='<div class="panel"><label style="margin-top:0">Rapport journalier</label><div class="row"><input type="date" value="'+rd+'" onchange="rd=this.value"><button onclick="dl(rd)">Télécharger</button></div></div>';
+  if(!S.sales.length)return h+'<div class="empty">Aucune vente enregistrée.</div>';
+  return h+S.sales.slice(0,60).map(function(s){return '<div class="panel"><div class="row"><b>'+f(s.total)+'</b><span class="mute">'+new Date(s.t).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})+'</span></div><div class="mute">'+s.items.map(function(i){return i.q+" × "+esc(i.name)}).join(", ")+'</div></div>'}).join("");
+}
+function weak(p){return /^(\d)\1{5}$/.test(p)||'01234567890123456789'.indexOf(p)>=0||'98765432109876543210'.indexOf(p)>=0}
+function lerr(m){var e=$('lerr');if(e)e.textContent=m}
+function busy(b){var x=$('lbtn');if(x)x.disabled=b}
+function vLock(){
+  if(!(window.crypto&&crypto.subtle))return '<div class="empty">Le chiffrement n’est pas disponible dans ce navigateur. Ouvrez l’application dans un navigateur récent en HTTPS.</div>';
+  var A=lsGet(KA),setup=!(A&&A.ver);
+  var h='<div style="max-width:360px;margin:10vh auto 0"><h1>SmartGest</h1><p class="sub">'+(setup?'Créez un code à 6 chiffres. Il chiffre vos données sur cet appareil et ne peut pas être récupéré : notez-le en lieu sûr.':'Entrez votre code pour ouvrir l’application.')+'</p>';
+  h+='<label>Code à 6 chiffres</label><input id="p1" type="password" inputmode="numeric" autocomplete="off" maxlength="6">';
+  if(setup)h+='<label>Confirmer le code</label><input id="p2" type="password" inputmode="numeric" autocomplete="off" maxlength="6">';
+  return h+'<div id="lerr" class="bad" style="min-height:22px;margin:10px 0"></div><button id="lbtn" style="width:100%" onclick="'+(setup?'doSetup()':'doUnlock()')+'">'+(setup?'Créer le code':'Déverrouiller')+'</button></div>';
+}
+async function doSetup(){
+  var a=$('p1').value,b=$('p2').value;
+  if(!/^\d{6}$/.test(a)){lerr('Le code doit contenir exactement 6 chiffres.');return}
+  if(a!==b){lerr('Les deux codes ne correspondent pas.');return}
+  if(weak(a)){lerr('Code trop simple. Évitez 111111 ou 123456.');return}
+  busy(true);
+  var salt=crypto.getRandomValues(new Uint8Array(16)),d=await derive(a,salt),old=lsGet(OLD);
+  if(!old||!Array.isArray(old.products)||!Array.isArray(old.sales))old={products:[],sales:[]};
+  K=d.key;S=old;lsSet(KA,{salt:b64(salt),ver:d.ver,fails:0,until:0});
+  save();await q;
+  try{localStorage.removeItem(OLD)}catch(e){}
+  startIdle();render();
+}
+async function doUnlock(){
+  var A=lsGet(KA),pin=$('p1').value,now=Date.now();
+  if(A.until>now){lerr('Trop d’essais. Réessayez dans '+Math.ceil((A.until-now)/1000)+' s.');return}
+  if(!/^\d{6}$/.test(pin)){lerr('Le code contient 6 chiffres.');return}
+  busy(true);
+  var d=await derive(pin,ub(A.salt));
+  if(d.ver!==A.ver){
+    A.fails=(A.fails||0)+1;if(A.fails>=5)A.until=now+30000*Math.pow(2,Math.min(A.fails-5,8));
+    lsSet(KA,A);busy(false);
+    lerr(A.until>now?'Code incorrect. Application bloquée '+Math.round((A.until-now)/1000)+' s.':'Code incorrect ('+A.fails+' échec(s)).');return}
+  var raw=lsGet(KD),data=null,note='';
+  if(!raw)data={products:[],sales:[]};
+  else{try{data=await unseal(d.key,raw)}catch(e){
+    try{data=await unseal(d.key,lsGet(KD+'.prev'));note='Données altérées : dernière copie saine restaurée.'}
+    catch(e2){lsSet(KD+'.corrupt',raw);data={products:[],sales:[]};note='Données illisibles ou altérées. Restaurez une sauvegarde dans Sécurité.'}}}
+  if(!data||!Array.isArray(data.products)||!Array.isArray(data.sales))data={products:[],sales:[]};
+  A.fails=0;A.until=0;lsSet(KA,A);K=d.key;S=data;tab='home';startIdle();render();if(note)msg(note);
+}
+function lock(){S=null;K=null;cart={};clearTimeout(idle);try{$('dlg').close()}catch(e){}render()}
+function startIdle(){clearTimeout(idle);idle=setTimeout(lock,120000)}
+['pointerdown','keydown','scroll'].forEach(function(ev){addEventListener(ev,function(){if(K)startIdle()},{passive:true})});
+document.addEventListener('visibilitychange',function(){if(document.hidden)hiddenAt=Date.now();else if(K&&hiddenAt&&Date.now()-hiddenAt>30000)lock()});
+function vSec(){
+  return '<h1>Sécurité</h1><p class="sub">Vos données sont chiffrées (AES-256-GCM) sur cet appareil. Toute modification extérieure est détectée.</p>'+
+  '<div class="panel row"><div><b>Verrouiller</b><div class="mute">Verrouillage auto après 2 min d’inactivité</div></div><button onclick="lock()">Verrouiller</button></div>'+
+  '<div class="panel row"><div><b>Sauvegarde chiffrée</b><div class="mute">Fichier protégé par votre code actuel</div></div><button onclick="backup()">Exporter</button></div>'+
+  '<div class="panel row"><div><b>Restaurer</b><div class="mute">Remplace les données actuelles</div></div><button class="ghost" onclick="restoreDlg()">Importer</button></div>'+
+  '<div class="panel row"><div><b>Code d’accès</b><div class="mute">Changer le code à 6 chiffres</div></div><button class="ghost" onclick="pinDlg()">Modifier</button></div>';
+}
+async function backup(){
+  var A=lsGet(KA),b=await seal(K,S),file=JSON.stringify({app:'smartgest',v:2,salt:A.salt,iv:b.iv,ct:b.ct});
+  try{var d=await getDl();if(!d){msg('Sauvegarde indisponible ici.');return}
+    await d.save({filename:'smartgest-sauvegarde-'+ymd(new Date())+'.json',data:file});msg('Sauvegarde enregistrée.')}
+  catch(e){if(!e||e.code!=='declined')msg('La sauvegarde a échoué.')}
+}
+function restoreDlg(){
+  $('dlg').innerHTML='<h2 style="margin-top:0">Restaurer une sauvegarde</h2><label>Fichier de sauvegarde (.json)</label><input id="rf" type="file" accept=".json,application/json"><label>Code utilisé lors de la sauvegarde</label><input id="rp" type="password" inputmode="numeric" maxlength="6"><div id="rerr" class="bad" style="min-height:22px;margin:8px 0"></div><div class="row"><button class="ghost" onclick="$(\'dlg\').close()">Annuler</button><button onclick="doRestore()">Remplacer mes données</button></div>';
+  $('dlg').showModal();
+}
+async function doRestore(){
+  var f=$('rf').files[0],p=$('rp').value,e=$('rerr');
+  if(!f||!/^\d{6}$/.test(p)){e.textContent='Choisissez un fichier et entrez le code à 6 chiffres.';return}
+  try{
+    var o=JSON.parse(await f.text());
+    if(o.app!=='smartgest'||!o.salt||!o.iv||!o.ct)throw 0;
+    var d=await derive(p,ub(o.salt)),data=await unseal(d.key,o);
+    if(!Array.isArray(data.products)||!Array.isArray(data.sales))throw 0;
+    S=data;save();$('dlg').close();render();msg('Sauvegarde restaurée.');
+  }catch(x){e.textContent='Fichier invalide, modifié, ou code incorrect.'}
+}
+function pinDlg(){
+  $('dlg').innerHTML='<h2 style="margin-top:0">Changer le code</h2><label>Code actuel</label><input id="c0" type="password" inputmode="numeric" maxlength="6"><label>Nouveau code</label><input id="c1" type="password" inputmode="numeric" maxlength="6"><label>Confirmer le nouveau code</label><input id="c2" type="password" inputmode="numeric" maxlength="6"><div id="perr" class="bad" style="min-height:22px;margin:8px 0"></div><div class="row"><button class="ghost" onclick="$(\'dlg\').close()">Annuler</button><button onclick="doPin()">Enregistrer</button></div>';
+  $('dlg').showModal();
+}
+async function doPin(){
+  var c=$('c0').value,a=$('c1').value,b=$('c2').value,e=$('perr'),A=lsGet(KA);
+  if(!/^\d{6}$/.test(c)||!/^\d{6}$/.test(a)||a!==b){e.textContent='Les codes doivent avoir 6 chiffres, et le nouveau code être identique dans les deux champs.';return}
+  if(weak(a)){e.textContent='Code trop simple. Évitez 111111 ou 123456.';return}
+  var d0=await derive(c,ub(A.salt));
+  if(d0.ver!==A.ver){e.textContent='Code actuel incorrect.';return}
+  var salt=crypto.getRandomValues(new Uint8Array(16)),d=await derive(a,salt);
+  await q;var blob=await seal(d.key,S);
+  if(!lsSet(KD,blob)){e.textContent='Stockage plein : code non modifié.';return}
+  lsSet(KA,{salt:b64(salt),ver:d.ver,fails:0,until:0});K=d.key;
+  try{localStorage.removeItem(KD+'.prev')}catch(x){}
+  $('dlg').close();msg('Code modifié. Les anciennes sauvegardes gardent l’ancien code.');
+}
+var rd=ymd(new Date());
+function ymd(d){var m=d.getMonth()+1,j=d.getDate();return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(j<10?"0":"")+j}
+function cc(v){v=String(v);return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+var tt;function msg(t){var e=$("toast");e.textContent=t;e.style.display="block";clearTimeout(tt);tt=setTimeout(function(){e.style.display="none"},3500)}
+async function dl(day){
+  if(!day){msg("Choisissez une date.");return}
+  var list=S.sales.filter(function(s){return ymd(new Date(s.t))===day}).reverse();
+  if(!list.length){msg("Aucune vente à cette date.");return}
+  var rev=0,gain=0,rows=[["Rapport journalier SmartGest",day],[],["Heure","Produit","Quantité","Prix unitaire","Total","Bénéfice"]];
+  list.forEach(function(s){var h=new Date(s.t).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+    s.items.forEach(function(i){var g=(i.p-i.b)*i.q;rev+=i.p*i.q;gain+=g;rows.push([h,i.name,i.q,i.p,i.p*i.q,g])})});
+  rows.push([],["Nombre de ventes",list.length],["Chiffre d’affaires",rev],["Bénéfice",gain],[],["Produits à réapprovisionner"]);
+  S.products.filter(function(p){return p.qty<=p.min}).forEach(function(p){rows.push([p.name,p.qty])});
+  var csv="\ufeff"+rows.map(function(r){return r.map(cc).join(";")}).join("\r\n");
+  try{
+    var d=await getDl();
+    if(!d){msg("Téléchargement indisponible ici.");return}
+    await d.save({filename:"smartgest-rapport-"+day+".csv",data:csv});
+    msg("Rapport enregistré.");
+  }catch(e){if(!e||e.code!=="declined")msg("Le rapport n’a pas pu être enregistré.")}
+}
+async function getDl(){
+  var P=window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.Plugins;
+  if(P&&P.Filesystem&&P.Share)return {save:async function(o){var r=await P.Filesystem.writeFile({path:o.filename,data:o.data,directory:'CACHE',encoding:'utf8'});await P.Share.share({title:o.filename,url:r.uri})}};
+  return window.claude&&await claude.use('downloads');
+}
+try{var PS=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.PrivacyScreen;if(PS)PS.enable()}catch(e){}
+render();
+</script>
+</body>
+</html>

@@ -1,17 +1,361 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#3B5BFF">
-  <title>SmartGest</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3B5BFF">
+<title>SmartGest</title>
+<style>
+:root{--bg:#EFEFF4;--card:#fff;--ink:#101418;--mute:#6F7A86;--line:#E4E6EA;--acc:#1F77C0;--acc-ink:#fff;--ok:#2B8A3E;--warn:#B26A00;--bad:#D32F2F;--bar:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0E1621;--card:#17212B;--ink:#F2F5F8;--mute:#8C9BAA;--line:#0E1621;--acc:#6AB3F3;--acc-ink:#0E1621;--ok:#5CC877;--warn:#F0B84A;--bad:#FF7B7B;--bar:#17212B}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0E1621;--card:#17212B;--ink:#F2F5F8;--mute:#8C9BAA;--line:#0E1621;--acc:#6AB3F3;--acc-ink:#0E1621;--ok:#5CC877;--warn:#F0B84A;--bad:#FF7B7B;--bar:#17212B}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.35 Roboto,-apple-system,"Segoe UI",system-ui,sans-serif;padding-bottom:180px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bar);z-index:10}
+main{max-width:600px;margin:0 auto}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bar);display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--line)}
+header b{font-size:19px;font-weight:700}
+h1{font-size:22px;margin:16px 16px 4px}
+h2{font-size:17px;margin:0 0 8px}
+.sub{margin:0 16px 12px;color:var(--mute)}
+.mute{color:var(--mute);font-size:13px}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.hero{background:var(--card);padding:18px 16px;margin-bottom:14px}
+.big{font-size:36px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.sec{padding:14px 16px 6px;color:var(--acc);font-weight:700;font-size:14px}
+.grp{background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:6px}
+.item{display:flex;align-items:center;gap:12px;padding:10px 16px;position:relative}
+.item+.item::before{content:"";position:absolute;top:0;left:74px;right:0;border-top:1px solid var(--line)}
+.item input{flex:1;min-width:0}
+.grow{flex:1;min-width:0}
+.av{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:19px;flex:none}
+.panel{background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 16px;font-weight:600;background:var(--acc);color:var(--acc-ink)}
+button.ghost{background:transparent;color:var(--acc)}
+button:disabled{opacity:.5}
+button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+input{font:inherit;width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+input[type=password]{letter-spacing:.35em;font-size:20px;text-align:center}
+label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+.qty{display:flex;align-items:center;gap:6px}
+.qty b{min-width:20px;text-align:center}
+.qty button{padding:6px 12px;border-radius:8px}
+.seg{display:flex;background:var(--line);border-radius:10px;padding:2px;margin:12px 16px}
+.seg button{flex:1;background:transparent;color:var(--ink);padding:8px}
+.seg button.on{background:var(--card);color:var(--acc);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.fab{position:fixed;right:16px;bottom:calc(var(--nav) + 18px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:50%;padding:0;font-size:30px;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.28)}
+.bar{position:fixed;left:12px;right:12px;bottom:calc(var(--nav) + 28px + env(safe-area-inset-bottom,0px));max-width:576px;margin:0 auto}
+.bar button{width:100%;padding:14px;font-size:16px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+:root{--nav:64px}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:8;display:flex;align-items:flex-end;background:var(--bar);border-top:1px solid var(--line);padding:0 4px env(safe-area-inset-bottom,0px);height:calc(var(--nav) + env(safe-area-inset-bottom,0px))}
+nav button{flex:1;min-width:0;height:var(--nav);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;color:var(--mute);border-radius:0;padding:4px 0;font-size:11px;font-weight:600}
+nav .ic{display:grid;place-items:center;width:58px;height:30px;border-radius:15px}
+nav button[aria-current="true"]{color:var(--acc)}
+nav button[aria-current="true"] .ic{background:color-mix(in srgb,var(--acc) 16%,transparent)}
+nav button.main{justify-content:flex-start;padding-top:0;color:var(--acc)}
+nav button.main .ic{width:56px;height:56px;border-radius:50%;background:var(--acc);color:var(--acc-ink);margin-top:-20px;border:4px solid var(--bar);box-shadow:0 4px 12px rgba(0,0,0,.28)}
+nav button.main[aria-current="true"] .ic{background:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 30%,transparent),0 4px 12px rgba(0,0,0,.28)}
+dialog{border:0;border-radius:16px;background:var(--card);color:var(--ink);width:min(92vw,420px);padding:18px}
+dialog::backdrop{background:rgba(10,14,28,.55)}
+.empty{text-align:center;color:var(--mute);padding:28px 16px}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(var(--nav) + 28px + env(safe-area-inset-bottom,0px));max-width:420px;margin:0 auto;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:12px;text-align:center;display:none;z-index:20}
+</style>
 </head>
 <body>
-  <main id="app"></main>
-  <nav id="nav"></nav>
-  <dialog id="dlg"></dialog>
-  <div id="toast" role="status"></div>
-  <script src="app.js"></script>
+<main id="app"></main>
+<nav id="nav"></nav>
+<dialog id="dlg"></dialog>
+<div id="toast" role="status"></div>
+<script>
+var OLD='smartgest.v1',KD='smartgest.v2.data',KA='smartgest.v2.auth',S=null,tab='home',cart={},K=null,idle,hiddenAt=0,q=Promise.resolve();
+var enc=new TextEncoder(),dec=new TextDecoder();
+function b64(u){u=new Uint8Array(u);var s='';for(var i=0;i<u.length;i++)s+=String.fromCharCode(u[i]);return btoa(s)}
+function ub(s){var r=atob(s),u=new Uint8Array(r.length);for(var i=0;i<r.length;i++)u[i]=r.charCodeAt(i);return u}
+function lsGet(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+async function derive(pin,salt){
+  var m=await crypto.subtle.importKey('raw',enc.encode(pin),'PBKDF2',false,['deriveBits']);
+  var all=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:salt,iterations:310000,hash:'SHA-256'},m,512));
+  var key=await crypto.subtle.importKey('raw',all.slice(0,32),'AES-GCM',false,['encrypt','decrypt']);
+  return {key:key,ver:b64(all.slice(32))};
+}
+async function seal(key,obj){var iv=crypto.getRandomValues(new Uint8Array(12));var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,enc.encode(JSON.stringify(obj)));return {iv:b64(iv),ct:b64(ct)}}
+async function unseal(key,b){return JSON.parse(dec.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:ub(b.iv)},key,ub(b.ct))))}
+function save(){
+  if(!K||!S)return;var key=K,snap=JSON.parse(JSON.stringify(S));
+  q=q.then(async function(){var b=await seal(key,snap);try{var o=localStorage.getItem(KD);if(o)localStorage.setItem(KD+'.prev',o)}catch(e){}if(!lsSet(KD,b))msg('Stockage plein : données non enregistrées.')}).catch(function(){});
+}
+function $(i){return document.getElementById(i)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function f(n){return Math.round(n).toLocaleString("fr-FR")+" "+cg("cur")}
+function today(){return new Date().toDateString()}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+var TABS=[["home","Accueil"],["stock","Stock"],["sell","Vendre"],["act","Activités"],["rep","Rapports"]];
+var TITLES={home:"Accueil",stock:"Stock",sell:"Vendre",act:"Activités",rep:"Rapports",sec:"Sécurité",more:"Plus",set:"Paramètres",about:"À propos"};
+var ICONS={home:'<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',stock:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',sell:'<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L21 7H6"/>',act:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8"/><path d="M12 8C10 3 6 4 7 6.5S11 8 12 8zM12 8c2-5 6-4 5-1.5S13 8 12 8z"/>',rep:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/>'};
+var mode="d",actCart={},PAL=["#D4545B","#D9772A","#8B6FD6","#4B9F3A","#2F9DA3","#2F7FC4","#C94C86"];
+function go(t){tab=t;render()}
+function av(n){var h=0;for(var i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))>>>0;return '<span class="av" style="background:'+PAL[h%7]+'">'+esc((n.trim()[0]||"?").toUpperCase())+'</span>'}
+function price(p,m){return m==="g"&&p.ws>0?p.ws:p.sell}
+function pend(){var o={};S.acts.forEach(function(a){if(!a.done)a.items.forEach(function(i){o[i.id]=(o[i.id]||0)+i.q})});return o}
+function dt(t){return new Date(t).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}
+function render(){
+  if(!S){$("nav").innerHTML="";$("app").innerHTML='<div style="padding:0 20px">'+vLock()+'</div>';return}
+  if(!Array.isArray(S.acts))S.acts=[];if(!S.cfg)S.cfg={};
+  $("nav").innerHTML=TABS.map(function(t){return '<button class="'+(t[0]==="sell"?"main":"")+'" onclick="go(\''+t[0]+'\')" aria-current="'+(tab===t[0])+'"><span class="ic"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ICONS[t[0]]+'</svg></span><span>'+t[1]+'</span></button>'}).join("");
+  $("app").innerHTML='<header><b>'+esc((tab==="home"&&cg("shop"))||TITLES[tab])+'</b>'+(tab==="more"?'<button class="ghost" onclick="go(\'home\')">Fermer</button>':(tab==="set"||tab==="sec"||tab==="about")?'<button class="ghost" onclick="go(\'more\')">Retour</button>':'<button class="ghost" onclick="go(\'more\')">Plus</button>')+'</header>'+({home:vHome,stock:vStock,sell:vSell,act:vAct,rep:vRep,sec:vSec,more:vMore,set:vSet,about:vAbout})[tab]();
+}
+function row(a,b){return '<div class="item"><div class="grow">'+a+'</div><b>'+b+'</b></div>'}
+function vHome(){
+  var ts=S.sales.filter(function(s){return new Date(s.t).toDateString()===today()});
+  var rev=0,gain=0,val=0,pn=0,pv=0,pd=pend();
+  ts.forEach(function(s){rev+=s.total;s.items.forEach(function(i){gain+=(i.p-i.b)*i.q})});
+  S.products.forEach(function(p){val+=p.buy*p.qty;var q=pd[p.id]||0;pn+=q;pv+=q*p.buy});
+  var low=S.products.filter(function(p){return p.qty<=p.min});
+  var h='<div class="hero"><div class="mute">Ventes du jour</div><div class="big">'+f(rev)+'</div><div class="mute">'+ts.length+' vente(s) · bénéfice <b class="ok">'+f(gain)+'</b></div></div>';
+  h+='<div class="grp">'+row("Valeur du stock",f(val))+row("Produits",S.products.length)+row("Offerts à rééquilibrer",pn?pn+" unité(s) · "+f(pv):"Aucun")+'</div><div class="sec">À réapprovisionner</div>';
+  if(!S.products.length)return h+'<div class="empty">Ajoutez votre premier produit pour démarrer.<br><br><button onclick="go(\'stock\')">Ajouter un produit</button></div>';
+  if(!low.length)return h+'<div class="grp"><div class="item ok">Aucun produit en rupture proche.</div></div>';
+  return h+'<div class="grp">'+low.map(function(p){return '<div class="item">'+av(p.name)+'<div class="grow"><b>'+esc(p.name)+'</b></div><b class="'+(p.qty===0?"bad":"warn")+'">'+(p.qty===0?"Rupture":p.qty+" restant(s)")+'</b></div>'}).join("")+'</div>';
+}
+function vStock(){
+  var pd=pend(),h='<div class="sec">'+S.products.length+' produit(s)</div>',fab='<button class="fab" onclick="editP()" aria-label="Ajouter un produit">+</button>';
+  if(!S.products.length)return h+'<div class="empty">Aucun produit. Touchez + pour ajouter le premier.</div>'+fab;
+  return h+'<div class="grp">'+S.products.map(function(p){var o=pd[p.id]||0;return '<div class="item" onclick="editP(\''+p.id+'\')">'+av(p.name)+'<div class="grow"><b>'+esc(p.name)+'</b><div class="mute">Détail '+f(p.sell)+(p.ws>0?" · Gros "+f(p.ws):"")+(o?" · "+o+" offert(s)":"")+'</div></div><b class="'+(p.qty<=p.min?(p.qty===0?"bad":"warn"):"")+'">'+p.qty+'</b></div>'}).join("")+'</div>'+fab;
+}
+function editP(id){
+  var p=S.products.find(function(x){return x.id===id})||{name:"",buy:"",sell:"",ws:"",qty:"",min:cg("min")};
+  $("dlg").innerHTML='<h2>'+(id?"Modifier le produit":"Nouveau produit")+'</h2><label>Nom</label><input id="n" value="'+esc(p.name)+'">'+
+  '<div class="grid"><div><label>Prix d’achat</label><input id="b" type="number" inputmode="numeric" value="'+p.buy+'"></div><div><label>Prix de détail</label><input id="s" type="number" inputmode="numeric" value="'+p.sell+'"></div>'+
+  '<div><label>Prix de gros</label><input id="w" type="number" inputmode="numeric" value="'+(p.ws||"")+'"></div><div><label>Quantité en stock</label><input id="q" type="number" inputmode="numeric" value="'+p.qty+'"></div>'+
+  '<div><label>Alerte à partir de</label><input id="m" type="number" inputmode="numeric" value="'+p.min+'"></div></div>'+
+  '<div class="row" style="margin-top:16px">'+(id?'<button class="ghost bad" onclick="delP(\''+id+'\')">Supprimer</button>':'<span></span>')+'<span><button class="ghost" onclick="$(\'dlg\').close()">Annuler</button> <button onclick="saveP(\''+(id||"")+'\')">Enregistrer</button></span></div>';
+  $("dlg").showModal();
+}
+function saveP(id){
+  var name=$("n").value.trim();if(!name){$("n").focus();return}
+  var o={name:name,buy:+$("b").value||0,sell:+$("s").value||0,ws:+$("w").value||0,qty:Math.max(0,+$("q").value||0),min:+$("m").value||0};
+  if(id)Object.assign(S.products.find(function(x){return x.id===id}),o);else{o.id=uid();S.products.push(o)}
+  save();$("dlg").close();render();
+}
+function delP(id){S.products=S.products.filter(function(x){return x.id!==id});save();$("dlg").close();render()}
+function setMode(m){mode=m;render()}
+function vSell(){
+  var tot=0,n=0,h='<div class="seg"><button class="'+(mode==="d"?"on":"")+'" onclick="setMode(\'d\')">Détail</button><button class="'+(mode==="g"?"on":"")+'" onclick="setMode(\'g\')">Gros</button></div>';
+  if(!S.products.length)return h+'<div class="empty">Ajoutez des produits dans Stock avant de vendre.</div>';
+  h+='<div class="grp">'+S.products.map(function(p){var q=cart[p.id]||0,pr=price(p,mode);tot+=q*pr;n+=q;
+    return '<div class="item">'+av(p.name)+'<div class="grow"><b>'+esc(p.name)+'</b><div class="mute">'+f(pr)+' · '+p.qty+' en stock</div></div><div class="qty"><button class="ghost" onclick="adj(\''+p.id+'\',-1)">−</button><b>'+q+'</b><button onclick="adj(\''+p.id+'\',1)">+</button></div></div>'}).join("")+'</div>';
+  return n?h+'<div class="bar"><button onclick="sell()">Valider la vente · '+f(tot)+'</button></div>':h;
+}
+function adj(id,d){
+  var p=S.products.find(function(x){return x.id===id}),q=(cart[id]||0)+d;
+  if(q<0)q=0;if(q>p.qty)q=p.qty;
+  if(q)cart[id]=q;else delete cart[id];
+  render();
+}
+function sell(){
+  var items=[],tot=0;
+  S.products.forEach(function(p){var q=cart[p.id];if(q){var pr=price(p,mode);items.push({id:p.id,name:p.name,q:q,p:pr,b:p.buy});p.qty-=q;tot+=q*pr}});
+  S.sales.unshift({id:uid(),t:Date.now(),m:mode,items:items,total:tot});
+  cart={};save();go("home");
+}
+function vAct(){
+  var A=S.acts,pe=A.filter(function(a){return !a.done}),dn=A.filter(function(a){return a.done}).slice(0,20);
+  function it(a){return a.items.map(function(i){return i.q+" × "+esc(i.name)}).join(", ")}
+  var h='';
+  if(!A.length)h+='<div class="empty">Aucune activité. Touchez + pour enregistrer une dégustation ou un échantillon offert.</div>';
+  if(pe.length)h+='<div class="sec">À rééquilibrer</div><div class="grp">'+pe.map(function(a){return '<div class="item">'+av(a.name)+'<div class="grow"><b>'+esc(a.name)+'</b><div class="mute">'+dt(a.t)+' · '+it(a)+'</div></div><button class="ghost" onclick="rebalDlg(\''+a.id+'\')">Rééquilibrer</button></div>'}).join("")+'</div>';
+  if(dn.length)h+='<div class="sec">Rééquilibrées</div><div class="grp">'+dn.map(function(a){return '<div class="item">'+av(a.name)+'<div class="grow"><b>'+esc(a.name)+'</b><div class="mute">'+dt(a.t)+' · '+it(a)+'</div></div><span class="ok">Fait</span></div>'}).join("")+'</div>';
+  return h+'<button class="fab" onclick="actDlg()" aria-label="Nouvelle activité">+</button>';
+}
+function actDlg(){actCart={};drawAct()}
+function drawAct(){
+  var nm=$("an")?$("an").value:"";
+  $("dlg").innerHTML='<h2>Nouvelle activité</h2><label>Nom</label><input id="an" placeholder="Ex. Dégustation" value="'+esc(nm)+'"><label>Produits pris dans le stock (offerts)</label>'+
+  (S.products.length?S.products.map(function(p){return '<div class="row" style="padding:6px 0"><div><b>'+esc(p.name)+'</b><div class="mute">'+p.qty+' en stock</div></div><div class="qty"><button class="ghost" onclick="actAdj(\''+p.id+'\',-1)">−</button><b>'+(actCart[p.id]||0)+'</b><button onclick="actAdj(\''+p.id+'\',1)">+</button></div></div>'}).join(""):'<div class="empty">Ajoutez d’abord des produits.</div>')+
+  '<div id="aerr" class="bad" style="min-height:22px;margin:8px 0"></div><div class="row"><button class="ghost" onclick="$(\'dlg\').close()">Annuler</button><button onclick="saveAct()">Enregistrer</button></div>';
+  if(!$("dlg").open)$("dlg").showModal();
+}
+function actAdj(id,d){var p=S.products.find(function(x){return x.id===id}),q=(actCart[id]||0)+d;if(q<0)q=0;if(q>p.qty)q=p.qty;if(q)actCart[id]=q;else delete actCart[id];drawAct()}
+function saveAct(){
+  var nm=$("an").value.trim()||"Activité",items=[];
+  S.products.forEach(function(p){var q=actCart[p.id];if(q)items.push({id:p.id,name:p.name,q:q,b:p.buy})});
+  if(!items.length){$("aerr").textContent="Choisissez au moins un produit.";return}
+  items.forEach(function(i){S.products.find(function(p){return p.id===i.id}).qty-=i.q});
+  S.acts.unshift({id:uid(),t:Date.now(),name:nm,items:items,done:false});
+  save();$("dlg").close();render();
+}
+function rebalDlg(id){
+  var a=S.acts.find(function(x){return x.id===id});
+  $("dlg").innerHTML='<h2>Rééquilibrer « '+esc(a.name)+' »</h2><p class="mute">Saisissez les unités de remplacement reçues lors du réapprovisionnement. Elles seront ajoutées au stock : ne les ajoutez pas aussi dans Stock.</p>'+
+  a.items.map(function(i,k){return '<label>'+esc(i.name)+' (offert : '+i.q+')</label><input id="rb'+k+'" type="number" inputmode="numeric" value="'+i.q+'">'}).join("")+
+  '<div class="row" style="margin-top:16px"><button class="ghost" onclick="$(\'dlg\').close()">Annuler</button><button onclick="doRebal(\''+id+'\')">Rééquilibrer</button></div>';
+  $("dlg").showModal();
+}
+function doRebal(id){
+  var a=S.acts.find(function(x){return x.id===id});
+  a.items.forEach(function(i,k){var q=Math.max(0,+$("rb"+k).value||0),p=S.products.find(function(x){return x.id===i.id});if(p)p.qty+=q});
+  a.done=true;a.doneAt=Date.now();save();$("dlg").close();render();
+}
+function vRep(){
+  var h='<div class="sec">Rapport journalier</div><div class="grp"><div class="item"><input type="date" value="'+rd+'" onchange="rd=this.value"><button onclick="dl(rd)">Télécharger</button></div><div class="item"><div class="grow mute">CSV : ventes, bénéfice, offerts et produits à réapprovisionner.</div><button class="ghost" onclick="dl(ymd(new Date()))">Aujourd’hui</button></div></div><div class="sec">Dernières ventes</div>';
+  if(!S.sales.length)return h+'<div class="empty">Aucune vente enregistrée.</div>';
+  return h+'<div class="grp">'+S.sales.slice(0,60).map(function(s){return '<div class="item"><div class="grow"><b>'+f(s.total)+'</b> <span class="mute">'+(s.m==="g"?"Gros":"Détail")+'</span><div class="mute">'+s.items.map(function(i){return i.q+" × "+esc(i.name)}).join(", ")+'</div></div><span class="mute">'+dt(s.t)+'</span></div>'}).join("")+'</div>';
+}
+function weak(p){return /^(\d)\1{5}$/.test(p)||'01234567890123456789'.indexOf(p)>=0||'98765432109876543210'.indexOf(p)>=0}
+function lerr(m){var e=$('lerr');if(e)e.textContent=m}
+function busy(b){var x=$('lbtn');if(x)x.disabled=b}
+function vLock(){
+  if(!(window.crypto&&crypto.subtle))return '<div class="empty">Le chiffrement n’est pas disponible dans ce navigateur. Ouvrez l’application dans un navigateur récent en HTTPS.</div>';
+  var A=lsGet(KA),setup=!(A&&A.ver);
+  var h='<div style="max-width:360px;margin:10vh auto 0"><h1>SmartGest</h1><p class="sub">'+(setup?'Créez un code à 6 chiffres. Il chiffre vos données sur cet appareil et ne peut pas être récupéré : notez-le en lieu sûr.':'Entrez votre code pour ouvrir l’application.')+'</p>';
+  h+='<label>Code à 6 chiffres</label><input id="p1" type="password" inputmode="numeric" autocomplete="off" maxlength="6">';
+  if(setup)h+='<label>Confirmer le code</label><input id="p2" type="password" inputmode="numeric" autocomplete="off" maxlength="6">';
+  return h+'<div id="lerr" class="bad" style="min-height:22px;margin:10px 0"></div><button id="lbtn" style="width:100%" onclick="'+(setup?'doSetup()':'doUnlock()')+'">'+(setup?'Créer le code':'Déverrouiller')+'</button></div>';
+}
+async function doSetup(){
+  var a=$('p1').value,b=$('p2').value;
+  if(!/^\d{6}$/.test(a)){lerr('Le code doit contenir exactement 6 chiffres.');return}
+  if(a!==b){lerr('Les deux codes ne correspondent pas.');return}
+  if(weak(a)){lerr('Code trop simple. Évitez 111111 ou 123456.');return}
+  busy(true);
+  var salt=crypto.getRandomValues(new Uint8Array(16)),d=await derive(a,salt),old=lsGet(OLD);
+  if(!old||!Array.isArray(old.products)||!Array.isArray(old.sales))old={products:[],sales:[]};
+  K=d.key;S=old;lsSet(KA,{salt:b64(salt),ver:d.ver,fails:0,until:0});
+  save();await q;
+  try{localStorage.removeItem(OLD)}catch(e){}
+  startIdle();render();
+}
+async function doUnlock(){
+  var A=lsGet(KA),pin=$('p1').value,now=Date.now();
+  if(A.until>now){lerr('Trop d’essais. Réessayez dans '+Math.ceil((A.until-now)/1000)+' s.');return}
+  if(!/^\d{6}$/.test(pin)){lerr('Le code contient 6 chiffres.');return}
+  busy(true);
+  var d=await derive(pin,ub(A.salt));
+  if(d.ver!==A.ver){
+    A.fails=(A.fails||0)+1;if(A.fails>=5)A.until=now+30000*Math.pow(2,Math.min(A.fails-5,8));
+    lsSet(KA,A);busy(false);
+    lerr(A.until>now?'Code incorrect. Application bloquée '+Math.round((A.until-now)/1000)+' s.':'Code incorrect ('+A.fails+' échec(s)).');return}
+  var raw=lsGet(KD),data=null,note='';
+  if(!raw)data={products:[],sales:[]};
+  else{try{data=await unseal(d.key,raw)}catch(e){
+    try{data=await unseal(d.key,lsGet(KD+'.prev'));note='Données altérées : dernière copie saine restaurée.'}
+    catch(e2){lsSet(KD+'.corrupt',raw);data={products:[],sales:[]};note='Données illisibles ou altérées. Restaurez une sauvegarde dans Sécurité.'}}}
+  if(!data||!Array.isArray(data.products)||!Array.isArray(data.sales))data={products:[],sales:[]};
+  A.fails=0;A.until=0;lsSet(KA,A);K=d.key;S=data;tab='home';mode=cg('mode');startIdle();render();if(note)msg(note);
+}
+function lock(){S=null;K=null;cart={};clearTimeout(idle);try{$('dlg').close()}catch(e){}render()}
+function startIdle(){clearTimeout(idle);idle=setTimeout(lock,(cg("lock")||2)*60000)}
+['pointerdown','keydown','scroll'].forEach(function(ev){addEventListener(ev,function(){if(K)startIdle()},{passive:true})});
+document.addEventListener('visibilitychange',function(){if(document.hidden)hiddenAt=Date.now();else if(K&&hiddenAt&&Date.now()-hiddenAt>30000)lock()});
+function vSec(){
+  return '<h1>Sécurité</h1><p class="sub">Vos données sont chiffrées (AES-256-GCM) sur cet appareil. Toute modification extérieure est détectée.</p>'+
+  '<div class="panel row"><div><b>Verrouiller</b><div class="mute">Verrouillage auto après '+cg("lock")+' min d’inactivité</div></div><button onclick="lock()">Verrouiller</button></div>'+
+  '<div class="panel row"><div><b>Sauvegarde chiffrée</b><div class="mute">Fichier protégé par votre code actuel</div></div><button onclick="backup()">Exporter</button></div>'+
+  '<div class="panel row"><div><b>Restaurer</b><div class="mute">Remplace les données actuelles</div></div><button class="ghost" onclick="restoreDlg()">Importer</button></div>'+
+  '<div class="panel row"><div><b>Code d’accès</b><div class="mute">Changer le code à 6 chiffres</div></div><button class="ghost" onclick="pinDlg()">Modifier</button></div>';
+}
+async function backup(){
+  var A=lsGet(KA),b=await seal(K,S),file=JSON.stringify({app:'smartgest',v:2,salt:A.salt,iv:b.iv,ct:b.ct});
+  try{var d=await getDl();if(!d){msg('Sauvegarde indisponible ici.');return}
+    await d.save({filename:'smartgest-sauvegarde-'+ymd(new Date())+'.json',data:file});msg('Sauvegarde enregistrée.')}
+  catch(e){if(!e||e.code!=='declined')msg('La sauvegarde a échoué.')}
+}
+function restoreDlg(){
+  $('dlg').innerHTML='<h2 style="margin-top:0">Restaurer une sauvegarde</h2><label>Fichier de sauvegarde (.json)</label><input id="rf" type="file" accept=".json,application/json"><label>Code utilisé lors de la sauvegarde</label><input id="rp" type="password" inputmode="numeric" maxlength="6"><div id="rerr" class="bad" style="min-height:22px;margin:8px 0"></div><div class="row"><button class="ghost" onclick="$(\'dlg\').close()">Annuler</button><button onclick="doRestore()">Remplacer mes données</button></div>';
+  $('dlg').showModal();
+}
+async function doRestore(){
+  var f=$('rf').files[0],p=$('rp').value,e=$('rerr');
+  if(!f||!/^\d{6}$/.test(p)){e.textContent='Choisissez un fichier et entrez le code à 6 chiffres.';return}
+  try{
+    var o=JSON.parse(await f.text());
+    if(o.app!=='smartgest'||!o.salt||!o.iv||!o.ct)throw 0;
+    var d=await derive(p,ub(o.salt)),data=await unseal(d.key,o);
+    if(!Array.isArray(data.products)||!Array.isArray(data.sales))throw 0;
+    S=data;save();$('dlg').close();render();msg('Sauvegarde restaurée.');
+  }catch(x){e.textContent='Fichier invalide, modifié, ou code incorrect.'}
+}
+function pinDlg(){
+  $('dlg').innerHTML='<h2 style="margin-top:0">Changer le code</h2><label>Code actuel</label><input id="c0" type="password" inputmode="numeric" maxlength="6"><label>Nouveau code</label><input id="c1" type="password" inputmode="numeric" maxlength="6"><label>Confirmer le nouveau code</label><input id="c2" type="password" inputmode="numeric" maxlength="6"><div id="perr" class="bad" style="min-height:22px;margin:8px 0"></div><div class="row"><button class="ghost" onclick="$(\'dlg\').close()">Annuler</button><button onclick="doPin()">Enregistrer</button></div>';
+  $('dlg').showModal();
+}
+async function doPin(){
+  var c=$('c0').value,a=$('c1').value,b=$('c2').value,e=$('perr'),A=lsGet(KA);
+  if(!/^\d{6}$/.test(c)||!/^\d{6}$/.test(a)||a!==b){e.textContent='Les codes doivent avoir 6 chiffres, et le nouveau code être identique dans les deux champs.';return}
+  if(weak(a)){e.textContent='Code trop simple. Évitez 111111 ou 123456.';return}
+  var d0=await derive(c,ub(A.salt));
+  if(d0.ver!==A.ver){e.textContent='Code actuel incorrect.';return}
+  var salt=crypto.getRandomValues(new Uint8Array(16)),d=await derive(a,salt);
+  await q;var blob=await seal(d.key,S);
+  if(!lsSet(KD,blob)){e.textContent='Stockage plein : code non modifié.';return}
+  lsSet(KA,{salt:b64(salt),ver:d.ver,fails:0,until:0});K=d.key;
+  try{localStorage.removeItem(KD+'.prev')}catch(x){}
+  $('dlg').close();msg('Code modifié. Les anciennes sauvegardes gardent l’ancien code.');
+}
+var DEF={shop:"",cur:"FCFA",mode:"d",lock:2,min:3};
+function cg(k){return S&&S.cfg&&S.cfg[k]!==undefined?S.cfg[k]:DEF[k]}
+function applyTheme(){var t=lsGet("smartgest.theme")||"auto",r=document.documentElement;if(t==="auto")r.removeAttribute("data-theme");else r.setAttribute("data-theme",t)}
+function seg(a){return '<div class="seg" style="margin:6px 0 10px">'+a.map(function(x){return '<button class="'+(x[1]?"on":"")+'" onclick="'+x[2]+'">'+x[0]+'</button>'}).join("")+'</div>'}
+function setv(k,v){if(!S.cfg)S.cfg={};S.cfg[k]=v;save();render()}
+function setTheme(t){lsSet("smartgest.theme",t);applyTheme();render()}
+function vMore(){
+  function r(k,t,s){return '<div class="item" onclick="go(\''+k+'\')">'+av(t)+'<div class="grow"><b>'+t+'</b><div class="mute">'+s+'</div></div></div>'}
+  return '<div class="grp" style="margin-top:14px">'+r('set','Paramètres','Boutique, devise, thème, verrouillage')+r('sec','Sécurité','Code, sauvegarde, restauration')+r('about','À propos','Le développeur et l’application')+'</div>';
+}
+function vSet(){
+  var th=lsGet("smartgest.theme")||"auto",lk=cg("lock");
+  function P(t,d,body){return '<div class="panel"><b>'+t+'</b><div class="mute">'+d+'</div>'+body+'</div>'}
+  return '<div class="sec">Boutique</div><div class="grp">'+
+   P('Nom de la boutique','Affiché en haut de l’accueil.','<input style="margin-top:8px" value="'+esc(cg("shop"))+'" maxlength="40" placeholder="Ex. Boutique Alfred" onchange="setv(\'shop\',this.value.trim())">')+
+   P('Devise','Symbole affiché après chaque montant.','<input style="margin-top:8px" value="'+esc(cg("cur"))+'" maxlength="8" onchange="setv(\'cur\',this.value.trim()||\'FCFA\')">')+
+   '</div><div class="sec">Ventes et stock</div><div class="grp">'+
+   P('Prix par défaut à la vente','Mode sélectionné à l’ouverture.',seg([['Détail',cg("mode")==="d","setv('mode','d')"],['Gros',cg("mode")==="g","setv('mode','g')"]]))+
+   P('Seuil d’alerte par défaut','Pour les nouveaux produits (en unités).','<input style="margin-top:8px" type="number" inputmode="numeric" value="'+cg("min")+'" onchange="setv(\'min\',Math.max(0,+this.value||0))">')+
+   '</div><div class="sec">Apparence et sécurité</div><div class="grp">'+
+   P('Thème','Auto suit le réglage du téléphone.',seg([['Auto',th==="auto","setTheme('auto')"],['Clair',th==="light","setTheme('light')"],['Sombre',th==="dark","setTheme('dark')"]]))+
+   P('Verrouillage automatique','Après une période d’inactivité.',seg([1,2,5,10].map(function(m){return [m+' min',lk===m,"setv('lock',"+m+")"]})))+'</div>';
+}
+function vAbout(){
+  return '<div class="hero" style="text-align:center"><span class="av" style="background:#2F7FC4;width:84px;height:84px;font-size:32px;margin:0 auto 12px">AB</span><div class="big" style="font-size:24px">Alfred Junior Bayiga</div><div class="mute">Étudiant en génie logiciel · Édéa, Cameroun</div></div>'+
+  '<div class="sec">À propos de moi</div><div class="panel">Je suis étudiant en génie logiciel. J’ai créé SmartGest pour aider les commerçants à suivre leur stock, leurs ventes et leurs produits offerts, simplement et en toute sécurité.</div>'+
+  '<div class="sec">Mon portfolio</div><div class="grp"><div class="item"><div class="grow"><a style="color:var(--acc);font-weight:600" href="https://alfredjuniorbayiga.netlify.app" target="_blank" rel="noopener">alfredjuniorbayiga.netlify.app</a></div></div></div>'+
+  '<div class="sec">L’application</div><div class="grp">'+row('Nom','SmartGest')+row('Version','1.0')+row('Données','Stockées sur cet appareil, chiffrées')+'</div>';
+}
+var rd=ymd(new Date());
+function ymd(d){var m=d.getMonth()+1,j=d.getDate();return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(j<10?"0":"")+j}
+function cc(v){v=String(v);return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+var tt;function msg(t){var e=$("toast");e.textContent=t;e.style.display="block";clearTimeout(tt);tt=setTimeout(function(){e.style.display="none"},3500)}
+async function dl(day){
+  if(!day){msg("Choisissez une date.");return}
+  var list=S.sales.filter(function(s){return ymd(new Date(s.t))===day}).reverse();
+  var al=S.acts.filter(function(a){return ymd(new Date(a.t))===day});
+  if(!list.length&&!al.length){msg("Aucune vente ni activité à cette date.");return}
+  var rev=0,gain=0,rows=[["Rapport journalier SmartGest",day],[],["Heure","Produit","Quantité","Prix unitaire","Total","Bénéfice"]];
+  list.forEach(function(s){var h=new Date(s.t).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+    s.items.forEach(function(i){var g=(i.p-i.b)*i.q;rev+=i.p*i.q;gain+=g;rows.push([h,i.name,i.q,i.p,i.p*i.q,g])})});
+  rows.push([],["Nombre de ventes",list.length],["Chiffre d’affaires",rev],["Bénéfice",gain],[],["Produits à réapprovisionner"]);
+  S.products.filter(function(p){return p.qty<=p.min}).forEach(function(p){rows.push([p.name,p.qty])});
+  if(al.length){rows.push([],["Offerts (activités)"],["Activité","Produit","Quantité","Coût d’achat"]);al.forEach(function(x){x.items.forEach(function(i){rows.push([x.name,i.name,i.q,i.q*i.b])})})}
+  var csv="\ufeff"+rows.map(function(r){return r.map(cc).join(";")}).join("\r\n");
+  try{
+    var d=await getDl();
+    if(!d){msg("Téléchargement indisponible ici.");return}
+    await d.save({filename:"smartgest-rapport-"+day+".csv",data:csv});
+    msg("Rapport enregistré.");
+  }catch(e){if(!e||e.code!=="declined")msg("Le rapport n’a pas pu être enregistré.")}
+}
+applyTheme();async function getDl(){
+  var P=window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.Plugins;
+  if(P&&P.Filesystem&&P.Share)return {save:async function(o){var r=await P.Filesystem.writeFile({path:o.filename,data:o.data,directory:'CACHE',encoding:'utf8'});await P.Share.share({title:o.filename,url:r.uri})}};
+  return window.claude&&await claude.use('downloads');
+}
+try{var PS=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.PrivacyScreen;if(PS)PS.enable()}catch(e){}
+render();
+</script>
 </body>
 </html>
